@@ -24,7 +24,7 @@ const genreOptions = [
 ];
 
 const Sessions = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
@@ -93,7 +93,7 @@ const Sessions = () => {
           <p className="text-gray-600">Join a session or create your own</p>
         </div>
         
-        {isAuthenticated && (
+        {isAdmin && (
           <Link to="/create-session">
             <Button variant="primary" className="flex items-center gap-2">
               <Plus className="w-5 h-5" />
@@ -189,7 +189,7 @@ const Sessions = () => {
           <p className="text-gray-500 mb-4">
             {searchQuery ? 'No sessions match your search' : 'No sessions found'}
           </p>
-          {isAuthenticated && (
+          {isAdmin && (
             <Link to="/create-session">
               <Button variant="primary">Create the first session</Button>
             </Link>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card, LiveIndicator } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
 import { 
   PlusCircle, 
   Radio, 
@@ -22,6 +23,8 @@ const FeatureCard = ({ icon: Icon, title, description, color }) => (
 );
 
 const Home = () => {
+  const { isAdmin } = useAuth();
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -45,16 +48,29 @@ const Home = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/create-session">
-                <Button 
-                  variant="primary" 
-                  size="lg" 
-                  className="bg-white text-indigo-600 hover:bg-indigo-50 px-8"
-                >
-                  <PlusCircle className="w-5 h-5 mr-2" />
-                  Start Creating
-                </Button>
-              </Link>
+              {isAdmin ? (
+                <Link to="/create-session">
+                  <Button 
+                    variant="primary" 
+                    size="lg" 
+                    className="bg-white text-indigo-600 hover:bg-indigo-50 px-8"
+                  >
+                    <PlusCircle className="w-5 h-5 mr-2" />
+                    Start Creating
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/sessions">
+                  <Button 
+                    variant="primary" 
+                    size="lg" 
+                    className="bg-white text-indigo-600 hover:bg-indigo-50 px-8"
+                  >
+                    <Music className="w-5 h-5 mr-2" />
+                    Browse Sessions
+                  </Button>
+                </Link>
+              )}
               <Link to="/live-sessions">
                 <Button 
                   variant="ghost" 

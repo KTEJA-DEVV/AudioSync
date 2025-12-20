@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Card, Button, Badge } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { 
   Music, 
@@ -12,6 +13,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '../utils/helpers';
 
@@ -35,6 +37,7 @@ const moodOptions = [
 
 const CreateSession = () => {
   const navigate = useNavigate();
+  const { isAdmin, isAuthenticated, loading } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
@@ -408,6 +411,40 @@ const CreateSession = () => {
         return null;
     }
   };
+
+  // Check admin access
+  useEffect(() => {
+    if (!loading && isAuthenticated && !isAdmin) {
+      navigate('/');
+    }
+  }, [isAdmin, isAuthenticated, loading, navigate]);
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  // Show access denied for non-admins
+  if (!isAdmin) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-12 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+          <ShieldAlert className="w-8 h-8 text-red-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+        <p className="text-gray-600 mb-6">
+          Only administrators can create sessions. Contact an admin if you need session creation privileges.
+        </p>
+        <Button variant="primary" onClick={() => navigate('/')}>
+          Go to Home
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pb-24 lg:pb-6">

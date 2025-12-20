@@ -59,17 +59,22 @@ const {
   getSuggestions,
   streamUpdates,
 } = require('../controllers/feedbackController');
-const { requireAuth, optionalAuth, requireCreator } = require('../middleware/auth');
+const { requireAuth, optionalAuth, requireAdmin, requireCreator } = require('../middleware/auth');
 
 // Session routes
+// Public/authenticated routes - no admin required
 router.get('/', optionalAuth, getSessions);
 router.get('/live', getLiveSessions);
 router.get('/:id', optionalAuth, getSession);
-router.post('/', requireAuth, createSession);
-router.put('/:id', requireAuth, updateSession);
-router.put('/:id/stage', requireAuth, advanceStage);
 router.post('/:id/join', requireAuth, joinSession);
-router.delete('/:id', requireAuth, cancelSession);
+
+// Admin-only routes
+router.post('/', requireAuth, requireAdmin, createSession);
+router.delete('/:id', requireAuth, requireAdmin, cancelSession);
+
+// Admin or session host routes
+router.put('/:id', requireAuth, updateSession); // Controller checks if user is host
+router.put('/:id/stage', requireAuth, advanceStage); // Controller checks if user is host
 
 // Lyrics routes
 router.get('/:id/lyrics', optionalAuth, getSessionLyrics);

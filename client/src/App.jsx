@@ -95,7 +95,7 @@ function App() {
         <Route 
           path="create-session" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="admin">
               <CreateSession />
             </ProtectedRoute>
           } 

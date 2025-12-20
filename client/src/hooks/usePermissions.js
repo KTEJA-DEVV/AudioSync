@@ -63,7 +63,7 @@ export const usePermissions = () => {
       // Content creation
       canSubmit: emailVerified,
       canUploadAudio: emailVerified && (isCreatorTier || isCreator),
-      canCreateSession: emailVerified && (isCreatorTier || isCreator),
+      canCreateSession: emailVerified && isAdmin, // Only admins can create sessions
       
       // Moderation
       canModerate: isModerator,

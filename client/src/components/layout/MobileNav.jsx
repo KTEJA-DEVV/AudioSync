@@ -12,19 +12,20 @@ import {
 import { cn } from '../../utils/helpers';
 
 const MobileNav = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Live', path: '/live-sessions', icon: Radio },
-    { name: 'Create', path: '/create-session', icon: PlusCircle, protected: true, primary: true },
+    { name: 'Create', path: '/create-session', icon: PlusCircle, adminOnly: true, primary: true },
     { name: 'Library', path: '/library', icon: Library },
     { name: 'Profile', path: '/profile', icon: User, protected: true },
     { name: 'Leaders', path: '/leaderboard', icon: Trophy, protected: false },
   ];
 
-  // Filter items based on authentication
+  // Filter items based on authentication and role
   const filteredItems = navItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
     if (item.protected && !isAuthenticated) return false;
     return true;
   }).slice(0, 5); // Only show 5 items

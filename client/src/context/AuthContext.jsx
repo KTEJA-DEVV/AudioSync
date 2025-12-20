@@ -18,6 +18,13 @@ export const AuthProvider = ({ children }) => {
   // Check if user is authenticated
   const isAuthenticated = !!user;
 
+  // Role-based helper functions
+  const isAdmin = user?.role === 'admin';
+  const isCreator = user?.role === 'creator' || user?.role === 'admin';
+  const isModerator = user?.role === 'moderator' || user?.role === 'admin';
+  const canCreateSession = isAdmin;
+  const canModerate = isModerator;
+
   // Get stored token
   const getToken = useCallback(() => {
     return localStorage.getItem(TOKEN_KEY);
@@ -189,6 +196,13 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     isAuthenticated,
+    // Role helpers
+    isAdmin,
+    isCreator,
+    isModerator,
+    canCreateSession,
+    canModerate,
+    // Auth actions
     login,
     register,
     logout,

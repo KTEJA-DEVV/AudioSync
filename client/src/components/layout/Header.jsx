@@ -18,13 +18,13 @@ import PropTypes from 'prop-types';
 import { cn } from '../../utils/helpers';
 
 const Header = ({ isLive = true }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Create', path: '/create-session', icon: PlusCircle, protected: true },
+    { name: 'Create', path: '/create-session', icon: PlusCircle, adminOnly: true },
     { name: 'Live', path: '/live-sessions', icon: Radio },
     { name: 'Library', path: '/library', icon: Library },
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
@@ -50,6 +50,8 @@ const Header = ({ isLive = true }) => {
           {isDesktop && (
             <nav className="hidden lg:flex items-center space-x-1">
               {navLinks.map((link) => {
+                // Hide admin-only links from non-admins
+                if (link.adminOnly && !isAdmin) return null;
                 if (link.protected && !isAuthenticated) return null;
                 return (
                   <NavLink
@@ -127,6 +129,8 @@ const Header = ({ isLive = true }) => {
         <div className="lg:hidden border-t border-gray-200 bg-white">
           <nav className="px-4 py-3 space-y-1">
             {navLinks.map((link) => {
+              // Hide admin-only links from non-admins
+              if (link.adminOnly && !isAdmin) return null;
               if (link.protected && !isAuthenticated) return null;
               return (
                 <NavLink
