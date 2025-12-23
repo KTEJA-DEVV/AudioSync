@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const config = require('./index');
+const seedAdmin = require('../utils/seedAdmin');
 
 let isConnected = false;
 let connectionPromise = null;
@@ -44,6 +45,16 @@ const connectDatabase = async () => {
       isConnected = true;
 
       console.log(`✓ MongoDB Connected: ${conn.connection.host}`);
+      
+      // Seed admin user after successful connection
+      if (config.nodeEnv !== 'test') {
+        try {
+          await seedAdmin();
+          console.log('✓ Admin user check/creation completed');
+        } catch (error) {
+          console.error('Error seeding admin user:', error);
+        }
+      }
 
       // Connection event handlers
       mongoose.connection.on('error', (err) => {

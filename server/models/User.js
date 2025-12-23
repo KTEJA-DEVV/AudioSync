@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
     
-    // Role & Type
+    // Role & Type - UPDATED: Added clear role hierarchy for session management
     role: {
       type: String,
       enum: ['user', 'creator', 'moderator', 'admin'],
@@ -61,7 +61,13 @@ const userSchema = new mongoose.Schema(
       default: 'casual',
     },
 
-    // Stats
+    // NEW: Account Status
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    // Stats - UPDATED: Added session-related stats
     stats: {
       songsContributed: { type: Number, default: 0 },
       lyricsAccepted: { type: Number, default: 0 },
@@ -70,8 +76,10 @@ const userSchema = new mongoose.Schema(
       votesCast: { type: Number, default: 0 },
       sessionsAttended: { type: Number, default: 0 },
       sessionsHosted: { type: Number, default: 0 },
+      sessionsCreated: { type: Number, default: 0 }, // NEW: Track sessions created by admin
       totalEarnings: { type: Number, default: 0 },
       helpfulFeedback: { type: Number, default: 0 },
+      feedbackSubmitted: { type: Number, default: 0 }, // NEW: Track feedback given
       tipsSent: { type: Number, default: 0 },
       tipsReceived: { type: Number, default: 0 },
       competitionsWon: { type: Number, default: 0 },
@@ -112,6 +120,8 @@ const userSchema = new mongoose.Schema(
         email: { type: Boolean, default: true },
         push: { type: Boolean, default: true },
         inApp: { type: Boolean, default: true },
+        sessionUpdates: { type: Boolean, default: true }, // NEW: Session-specific notifications
+        voteResults: { type: Boolean, default: true }, // NEW: Vote result notifications
       },
       audioQuality: {
         type: String,
@@ -122,6 +132,12 @@ const userSchema = new mongoose.Schema(
         type: String,
         enum: ['light', 'dark', 'system'],
         default: 'system',
+      },
+      // NEW: Session preferences
+      sessionPreferences: {
+        autoJoinPublic: { type: Boolean, default: false },
+        showInParticipantList: { type: Boolean, default: true },
+        allowDirectMessages: { type: Boolean, default: true },
       },
     },
 
@@ -169,7 +185,15 @@ const userSchema = new mongoose.Schema(
 
     // Activity
     lastActiveAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date }, // NEW: Track last login
     isOnline: { type: Boolean, default: false },
+
+    // NEW: Session-related tracking
+    currentSession: {
+      sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session' },
+      joinedAt: { type: Date },
+      role: { type: String, enum: ['participant', 'host', 'moderator'] },
+    },
   },
   {
     timestamps: true,
@@ -178,9 +202,13 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Indexes - only add indexes that aren't already defined via unique: true
+// Indexes for efficient role-based queries
+userSchema.index({ role: 1 });
 userSchema.index({ 'reputation.score': -1 });
 userSchema.index({ createdAt: -1 });
+userSchema.index({ role: 1 }); // NEW: Index for role-based queries
+userSchema.index({ isActive: 1 }); // NEW: Index for active user queries
+userSchema.index({ 'stats.sessionsCreated': -1 }); // NEW: Index for admin session stats
 
 // Virtual for avatar URL with fallback
 userSchema.virtual('avatarUrl').get(function () {
@@ -210,6 +238,32 @@ userSchema.virtual('totalContributions').get(function () {
   );
 });
 
+// NEW: Virtual to check if user can create sessions (admin or creator role)
+userSchema.virtual('canCreateSession').get(function () {
+  return ['admin', 'creator', 'moderator'].includes(this.role);
+});
+
+// NEW: Virtual to check if user can manage sessions (admin only for full control)
+userSchema.virtual('canManageSessions').get(function () {
+  return this.role === 'admin';
+});
+
+// NEW: Virtual to check if user can moderate (admin or moderator)
+userSchema.virtual('canModerate').get(function () {
+  return ['admin', 'moderator'].includes(this.role);
+});
+
+// NEW: Virtual for role display name
+userSchema.virtual('roleDisplayName').get(function () {
+  const roleNames = {
+    user: 'Participant',
+    creator: 'Creator',
+    moderator: 'Moderator',
+    admin: 'Administrator',
+  };
+  return roleNames[this.role] || 'User';
+});
+
 // Pre-save hook for password hashing
 userSchema.pre('save', async function (next) {
   // Only hash if password is modified
@@ -230,190 +284,157 @@ userSchema.pre('save', function (next) {
   if (!this.displayName) {
     this.displayName = this.username;
   }
-  next();
-});
 
 // Method: Compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method: Generate JWT token
+// Role-based permission methods
+userSchema.methods.hasRole = function(roles) {
+  if (!this.role) return false;
+  if (typeof roles === 'string') {
+    return this.role === roles;
+  }
+  return roles.includes(this.role);
+};
+
+userSchema.methods.isAdmin = function() {
+  return this.role === 'admin';
+};
+
+userSchema.methods.canCreateSession = function() {
+  return this.role === 'admin';
+};
+
+userSchema.methods.canModerate = function() {
+  return ['admin', 'moderator'].includes(this.role);
+};
+
+// Virtual for permissions
+userSchema.virtual('permissions').get(function() {
+  return {
+    canCreateSession: this.role === 'admin',
+    canModerate: ['admin', 'moderator'].includes(this.role),
+    canCreateCompetition: ['admin', 'creator'].includes(this.role),
+    canUploadStems: ['admin', 'creator', 'technical'].includes(this.role) || this.userType === 'technical',
+    voteWeight: this.calculateVoteWeight()
+  };
+});
+
+// Method: Generate JWT token - UPDATED: Include more role info
 userSchema.methods.generateToken = function (expiresIn = config.jwtExpiresIn) {
   return jwt.sign(
     {
       id: this._id,
       role: this.role,
       tier: this.subscription?.tier || 'free',
+      canCreateSession: this.canCreateSession,
+      canManageSessions: this.canManageSessions,
+      canModerate: this.canModerate,
     },
     config.jwtSecret,
     { expiresIn }
   );
 };
 
-// Method: Calculate vote weight based on reputation
-// Formula: base 1 + (reputation / 1000), capped at 5
-userSchema.methods.calculateVoteWeight = function () {
-  const score = this.reputation?.score || 0;
-  
-  // Base weight: 1 + (reputation / 1000)
-  const weight = 1 + (score / 1000);
-  
-  // Cap at 5
-  return Math.min(Math.round(weight * 100) / 100, 5);
+// Method: Get public profile - UPDATED: Include role permissions info
+userSchema.methods.toPublicProfile = function() {
+  const user = this;
+  const publicProfile = {
+    id: user._id,
+    username: user.username,
+    displayName: user.displayName || user.username,
+    avatar: user.avatarUrl,
+    bio: user.bio,
+    role: user.role,
+    userType: user.userType,
+    stats: user.stats,
+    reputation: {
+      score: user.reputation.score,
+      level: user.reputation.level,
+      badges: user.reputation.badges,
+      voteWeight: user.reputation.voteWeight,
+    },
+    socialLinks: user.socialLinks,
+    createdAt: user.createdAt,
+    lastActiveAt: user.lastActiveAt,
+    // Include permissions in public profile
+    permissions: user.permissions
+  };
+
+  return publicProfile;
 };
 
-// Method: Get vote weight breakdown for UI
-userSchema.methods.getVoteWeightBreakdown = function () {
-  const score = this.reputation?.score || 0;
-  const baseWeight = 1;
-  const reputationBonus = Math.min(score / 1000, 4); // Max 4 from reputation
-  const totalWeight = this.calculateVoteWeight();
+// Method to get auth response (for login/register)
+userSchema.methods.toAuthResponse = function() {
+  const user = this;
+  const token = user.generateToken();
   
   return {
-    base: baseWeight,
-    reputationBonus: Math.round(reputationBonus * 100) / 100,
-    total: totalWeight,
-    maxPossible: 5,
-    reputationNeededForMax: 4000,
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    displayName: user.displayName || user.username,
+    avatar: user.avatarUrl,
+    role: user.role,
+    userType: user.userType,
+    subscription: {
+      tier: user.subscription?.tier || 'free',
+      validUntil: user.subscription?.validUntil,
+    },
+    emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
+    // Permission flags for frontend role-based UI
+    permissions: {
+      canCreateSession: user.canCreateSession,
+      canManageSessions: user.canManageSessions,
+      canModerate: user.canModerate,
+      isAdmin: user.isAdmin(),
+    },
   };
 };
 
-// Method: Add reputation points
-userSchema.methods.addReputation = async function (points, reason) {
-  this.reputation.score += points;
+// NEW: Method to increment session stats
+userSchema.methods.incrementSessionStat = async function (statName, value = 1) {
+  const validStats = [
+    'sessionsAttended',
+    'sessionsHosted',
+    'sessionsCreated',
+    'votesCast',
+    'feedbackSubmitted',
+  ];
+
+  if (!validStats.includes(statName)) {
+    throw new Error(`Invalid stat name: ${statName}`);
+  }
+
+  this.stats[statName] = (this.stats[statName] || 0) + value;
   
-  // Update level based on score
-  const newLevel = this.calculateLevel();
-  const levelChanged = newLevel !== this.reputation.level;
-  this.reputation.level = newLevel;
-  
-  // Recalculate vote weight
-  this.reputation.voteWeight = this.calculateVoteWeight();
-  
-  // Check for new badges
-  await this.checkBadgeEligibility();
+  // Check for new badges after stat update
+  const newBadges = await this.checkBadgeEligibility();
   
   await this.save();
   
-  return { levelChanged, newLevel, newScore: this.reputation.score };
+  return { newValue: this.stats[statName], newBadges };
 };
 
-// Method: Calculate reputation level
-userSchema.methods.calculateLevel = function () {
-  const score = this.reputation.score;
-  
-  if (score >= 10000) return 'diamond';
-  if (score >= 5000) return 'platinum';
-  if (score >= 2000) return 'gold';
-  if (score >= 500) return 'silver';
-  return 'bronze';
-};
-
-// Method: Check badge eligibility
-userSchema.methods.checkBadgeEligibility = async function () {
-  const earnedBadges = [];
-  const existingBadgeIds = this.reputation.badges.map(b => b.badgeId);
-
-  const badgeRules = [
-    {
-      badgeId: 'first_contribution',
-      name: 'First Steps',
-      description: 'Made your first contribution',
-      icon: '🎵',
-      rarity: 'common',
-      condition: () => this.stats.songsContributed >= 1,
-    },
-    {
-      badgeId: 'ten_contributions',
-      name: 'Rising Star',
-      description: 'Made 10 contributions',
-      icon: '⭐',
-      rarity: 'rare',
-      condition: () => this.stats.songsContributed >= 10,
-    },
-    {
-      badgeId: 'fifty_contributions',
-      name: 'Prolific Creator',
-      description: 'Made 50 contributions',
-      icon: '🌟',
-      rarity: 'epic',
-      condition: () => this.stats.songsContributed >= 50,
-    },
-    {
-      badgeId: 'hundred_votes',
-      name: 'Democracy Hero',
-      description: 'Cast 100 votes',
-      icon: '🗳️',
-      rarity: 'rare',
-      condition: () => this.stats.votesCast >= 100,
-    },
-    {
-      badgeId: 'ten_sessions',
-      name: 'Session Regular',
-      description: 'Attended 10 live sessions',
-      icon: '🎤',
-      rarity: 'rare',
-      condition: () => this.stats.sessionsAttended >= 10,
-    },
-    {
-      badgeId: 'gold_reputation',
-      name: 'Golden Voice',
-      description: 'Reached Gold reputation level',
-      icon: '🏆',
-      rarity: 'epic',
-      condition: () => this.reputation.score >= 2000,
-    },
-    {
-      badgeId: 'diamond_reputation',
-      name: 'Diamond Legend',
-      description: 'Reached Diamond reputation level',
-      icon: '💎',
-      rarity: 'legendary',
-      condition: () => this.reputation.score >= 10000,
-    },
-  ];
-
-  for (const rule of badgeRules) {
-    if (!existingBadgeIds.includes(rule.badgeId) && rule.condition()) {
-      const badge = {
-        badgeId: rule.badgeId,
-        name: rule.name,
-        description: rule.description,
-        icon: rule.icon,
-        rarity: rule.rarity,
-        earnedAt: new Date(),
-      };
-      this.reputation.badges.push(badge);
-      earnedBadges.push(badge);
-    }
-  }
-
-  return earnedBadges;
-};
-
-// Method: Get public profile
-userSchema.methods.toPublicProfile = function () {
-  return {
-    id: this._id,
-    username: this.username,
-    displayName: this.displayName,
-    avatar: this.avatarUrl,
-    coverImage: this.coverImage,
-    bio: this.bio,
-    role: this.role,
-    userType: this.userType,
-    stats: this.stats,
-    reputation: {
-      score: this.reputation.score,
-      level: this.reputation.level,
-      badges: this.reputation.badges,
-      voteWeight: this.reputation.voteWeight,
-    },
-    socialLinks: this.socialLinks,
-    createdAt: this.createdAt,
-    lastActiveAt: this.lastActiveAt,
+// NEW: Method to update current session
+userSchema.methods.joinSession = async function (sessionId, role = 'participant') {
+  this.currentSession = {
+    sessionId,
+    joinedAt: new Date(),
+    role,
   };
+  this.lastActiveAt = new Date();
+  await this.save();
+};
+
+// NEW: Method to leave current session
+userSchema.methods.leaveSession = async function () {
+  this.currentSession = undefined;
+  this.lastActiveAt = new Date();
+  await this.save();
 };
 
 // Static: Find by credentials
@@ -424,11 +445,21 @@ userSchema.statics.findByCredentials = async function (email, password) {
     throw new Error('Invalid email or password');
   }
 
+  // NEW: Check if user is active
+  if (!user.isActive) {
+    throw new Error('Your account has been deactivated. Please contact support.');
+  }
+
   const isMatch = await user.comparePassword(password);
   
   if (!isMatch) {
     throw new Error('Invalid email or password');
   }
+
+  // Update last login
+  user.lastLoginAt = new Date();
+  user.lastActiveAt = new Date();
+  await user.save();
 
   return user;
 };
@@ -441,11 +472,53 @@ userSchema.statics.getLeaderboard = async function (options = {}) {
     filter = {},
   } = options;
 
-  return this.find(filter)
+  return this.find({ ...filter, isActive: true }) // Only active users
     .select('username displayName avatar reputation.score reputation.level reputation.badges stats')
     .sort({ [sortBy]: -1 })
     .limit(limit)
     .lean();
+};
+
+// NEW: Static: Find admins
+userSchema.statics.findAdmins = async function () {
+  return this.find({ role: 'admin', isActive: true })
+    .select('username displayName email avatar')
+    .lean();
+};
+
+// NEW: Static: Find users by role
+userSchema.statics.findByRole = async function (role, options = {}) {
+  const { limit = 50, skip = 0 } = options;
+  
+  return this.find({ role, isActive: true })
+    .select('username displayName avatar role stats reputation.score reputation.level')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+// NEW: Static: Get session creators (users who can create sessions)
+userSchema.statics.getSessionCreators = async function () {
+  return this.find({ 
+    role: { $in: ['admin', 'creator', 'moderator'] },
+    isActive: true 
+  })
+    .select('username displayName avatar role stats.sessionsCreated stats.sessionsHosted')
+    .sort({ 'stats.sessionsCreated': -1 })
+    .lean();
+};
+
+// NEW: Static: Check if email exists
+userSchema.statics.emailExists = async function (email) {
+  const user = await this.findOne({ email: email.toLowerCase() });
+  return !!user;
+};
+
+// NEW: Static: Check if username exists
+userSchema.statics.usernameExists = async function (username) {
+  const user = await this.findOne({ username: username.toLowerCase() });
+  return !!user;
 };
 
 const User = mongoose.model('User', userSchema);

@@ -5,6 +5,8 @@ import Profile from './Profile';
 import Library from './Library';
 import Leaderboard from './Leaderboard';
 import ForgotPassword from './ForgotPassword';
+import ResetPassword from './ResetPassword';
+import VerifyEmail from './VerifyEmail';
 import Sessions from './Sessions';
 import SessionDetail from './SessionDetail';
 import GenerationPage from './GenerationPage';
@@ -17,6 +19,7 @@ import SongDetailPage from './SongDetailPage';
 import MySongsPage from './MySongsPage';
 import NotFound from './NotFound';
 import ServerError from './ServerError';
+import Unauthorized from './Unauthorized';
 
 export {
   Home,
@@ -26,6 +29,8 @@ export {
   Library,
   Leaderboard,
   ForgotPassword,
+  ResetPassword,
+  VerifyEmail,
   Sessions,
   SessionDetail,
   GenerationPage,
@@ -38,4 +43,5 @@ export {
   MySongsPage,
   NotFound,
   ServerError,
+  Unauthorized,
 };

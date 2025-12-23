@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AudioProvider } from './context/AudioContext';
@@ -20,10 +20,7 @@ import ProtectedRoute, {
 } from './components/auth/ProtectedRoute';
 import { WordCloudOverlayPage } from './components/features';
 
-// =============================================
-// PAGE IMPORTS
-// =============================================
-
+// Page Imports
 import { 
   Home, 
   Login, 
@@ -36,14 +33,6 @@ import {
   VerifyEmail,
   Sessions,
   SessionDetail,
-  GenerationPage,
-  GranularVotingPage,
-  LiveSessionPage,
-  LiveSessionsListPage,
-  RewardsPage,
-  LibraryPage,
-  SongDetailPage,
-  MySongsPage,
   NotFound,
   Unauthorized,
 } from './pages';
@@ -69,7 +58,7 @@ import {
 } from './pages/admin';
 
 // =============================================
-// PLACEHOLDER PAGES
+// PLACEHOLDER COMPONENTS
 // =============================================
 
 const Settings = () => (
@@ -108,7 +97,7 @@ const Notifications = () => (
 );
 
 // =============================================
-// APP COMPONENT
+// MAIN COMPONENTS
 // =============================================
 
 // Create a client
@@ -127,14 +116,10 @@ function AppContent() {
   return (
     <AudioLayout>
       <Routes>
-        {/* ============================================= */}
-        {/* OVERLAY ROUTES */}
-        {/* ============================================= */}
+        {/* Overlay Routes */}
         <Route path="overlay/wordcloud/:id" element={<WordCloudOverlayPage />} />
         
-        {/* ============================================= */}
-        {/* PUBLIC ROUTES */}
-        {/* ============================================= */}
+        {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
@@ -143,9 +128,7 @@ function AppContent() {
         <Route path="verify-email" element={<VerifyEmail />} />
         <Route path="unauthorized" element={<Unauthorized />} />
 
-        {/* ============================================= */}
-        {/* PROTECTED ROUTES */}
-        {/* ============================================= */}
+        {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="profile" element={<Profile />} />
           <Route path="library" element={<Library />} />
@@ -158,7 +141,6 @@ function AppContent() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="subscription" element={<Subscription />} />
           
-          {/* Join Session */}
           <Route 
             path="join/:code" 
             element={
@@ -168,23 +150,19 @@ function AppContent() {
             } 
           />
           
-          {/* Creator Routes */}
           <Route element={<CreatorRoute />}>
             <Route path="creator/dashboard" element={<CreatorDashboard />} />
           </Route>
           
-          {/* Moderator Routes */}
           <Route element={<ModeratorRoute />}>
             <Route path="moderator/dashboard" element={<ModeratorDashboard />} />
             <Route path="moderator/actions" element={<ModActionsPage />} />
           </Route>
           
-          {/* Session Creator Routes */}
           <Route element={<SessionCreatorRoute />}>
             <Route path="session-creator" element={<SessionCreatorRoute />} />
           </Route>
           
-          {/* Verified User Routes */}
           <Route element={<VerifiedRoute />}>
             <Route path="premium" element={<div>Premium Content</div>} />
           </Route>
@@ -252,210 +230,5 @@ function App() {
     </ErrorBoundary>
   );
 }
-
-export default App;
-        />
-        
-        {/* Subscription */}
-        <Route 
-          path="subscription" 
-          element={
-            <ProtectedRoute>
-              <Subscription />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Rewards */}
-        <Route 
-          path="rewards" 
-          element={
-            <ProtectedRoute>
-              <RewardsPage />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* My Songs */}
-        <Route 
-          path="my-songs" 
-          element={
-            <ProtectedRoute>
-              <MySongsPage />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* My Sessions (participated) */}
-        <Route 
-          path="my-sessions" 
-          element={
-            <ProtectedRoute>
-              <Sessions showUserSessions />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Join session by code */}
-        <Route 
-          path="join" 
-          element={
-            <ProtectedRoute>
-              <SessionDetail joinMode />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="join/:code" 
-          element={
-            <ProtectedRoute>
-              <SessionDetail joinMode />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* ------------------------------------------- */}
-        {/* CREATOR ROUTES (Creator, Moderator, Admin) */}
-        {/* ------------------------------------------- */}
-        
-        {/* Create Session */}
-        <Route 
-          path="create-session" 
-          element={
-            <SessionCreatorRoute
-              unauthorizedFallback={
-                <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">
-                    Creator Access Required
-                  </h1>
-                  <p className="text-gray-600 mb-6">
-                    You need creator permissions to create sessions. 
-                    Contact an administrator to upgrade your account.
-                  </p>
-                  <a 
-                    href="/sessions" 
-                    className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    Browse Sessions
-                  </a>
-                </div>
-              }
-            >
-              <CreateSession />
-            </SessionCreatorRoute>
-          } 
-        />
-        
-        {/* Edit Session */}
-        <Route 
-          path="session/:id/edit" 
-          element={
-            <CreatorRoute>
-              <EditSession />
-            </CreatorRoute>
-          } 
-        />
-        
-        {/* Creator Dashboard */}
-        <Route 
-          path="creator" 
-          element={
-            <CreatorRoute>
-              <CreatorDashboard />
-            </CreatorRoute>
-          } 
-        />
-        <Route 
-          path="creator/dashboard" 
-          element={
-            <CreatorRoute>
-              <CreatorDashboard />
-            </CreatorRoute>
-          } 
-        />
-        
-        {/* My Created Sessions */}
-        <Route 
-          path="creator/sessions" 
-          element={
-            <CreatorRoute>
-              <Sessions showHostedSessions />
-            </CreatorRoute>
-          } 
-        />
-        
-        {/* ------------------------------------------- */}
-        {/* MODERATOR ROUTES (Moderator, Admin) */}
-        {/* ------------------------------------------- */}
-        
-        {/* Moderator Dashboard */}
-        <Route 
-          path="moderator" 
-          element={
-            <ModeratorRoute>
-              <ModeratorDashboard />
-            </ModeratorRoute>
-          } 
-        />
-        <Route 
-          path="moderator/dashboard" 
-          element={
-            <ModeratorRoute>
-              <ModeratorDashboard />
-            </ModeratorRoute>
-          } 
-        />
-        
-        {/* Reports (accessible to moderators) */}
-        <Route 
-          path="moderator/reports" 
-          element={
-            <ModeratorRoute>
-              <ReportsPage />
-            </ModeratorRoute>
-          } 
-        />
-        
-        {/* Content Moderation */}
-        <Route 
-          path="moderator/content" 
-          element={
-            <ModeratorRoute>
-              <ContentModeration />
-            </ModeratorRoute>
-          } 
-        />
-        
-        {/* Mod Actions Log */}
-        <Route 
-          path="moderator/actions" 
-          element={
-            <ModeratorRoute>
-              <ModActionsPage />
-            </ModeratorRoute>
-          } 
-        />
-        
-        {/* ------------------------------------------- */}
-        {/* 404 - Not Found */}
-        {/* ------------------------------------------- */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AudioLayout>
-      <Route path="auth/callback" element={<Login />} />
-      <Route path="auth/google/callback" element={<Login provider="google" />} />
-      <Route path="auth/discord/callback" element={<Login provider="discord" />} />
-      
-      {/* Shortcut redirects */}
-      <Route path="s/:code" element={<Navigate to="/join/:code" replace />} />
-      <Route path="session-code/:code" element={<Navigate to="/join/:code" replace />} />
-    </Routes>
-  );
-}
-
-// Wrap the app with all necessary providers
-const App = () => (
-  <AppWithProviders />
-);
 
 export default App;

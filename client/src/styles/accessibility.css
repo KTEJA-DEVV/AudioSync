@@ -7,7 +7,7 @@
 
 /* Default focus ring for all focusable elements */
 *:focus-visible {
-  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline: 2px solid var(--color-primary, #3E7BFF);
   outline-offset: 2px;
 }
 
@@ -23,17 +23,17 @@ textarea:focus {
 /* Custom focus ring classes */
 .focus-ring:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary-500, #6366f1);
+  box-shadow: 0 0 0 2px var(--color-primary, #3E7BFF);
 }
 
 .focus-ring-offset:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color-primary-500, #6366f1);
+  box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-primary, #3E7BFF);
 }
 
 /* Focus within for parent containers */
 .focus-within-ring:focus-within {
-  box-shadow: 0 0 0 2px var(--color-primary-500, #6366f1);
+  box-shadow: 0 0 0 2px var(--color-primary, #3E7BFF);
 }
 
 /* ==================== Reduced Motion ==================== */
@@ -108,7 +108,7 @@ textarea:focus {
   z-index: 99999;
   top: 1rem;
   left: 1rem;
-  background: var(--color-primary-600, #4f46e5);
+  background: var(--color-primary-dark, #2A5FD1);
   color: white;
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -207,21 +207,21 @@ textarea:focus {
 /* Required field indicator */
 .required-field::after {
   content: " *";
-  color: var(--color-red-500, #ef4444);
+  color: var(--color-error, #F56565);
 }
 
 /* Error state styling */
 .input-error {
-  border-color: var(--color-red-500, #ef4444);
+  border-color: var(--color-error, #F56565);
 }
 
 .input-error:focus {
-  box-shadow: 0 0 0 2px var(--color-red-500, #ef4444);
+  box-shadow: 0 0 0 2px var(--color-error, #F56565);
 }
 
 /* Error message styling */
 .error-message {
-  color: var(--color-red-600, #dc2626);
+  color: var(--color-error, #F56565);
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
